@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 520" font-family="'Segoe UI', -apple-system, sans-serif" font-size="13">
+  <defs>
+    <marker id="arrow-lr" markerWidth="8" markerHeight="6" refX="0" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#22c55e"/>
+    </marker>
+    <marker id="arrow-dms" markerWidth="8" markerHeight="6" refX="0" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#8b5cf6"/>
+    </marker>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.08"/>
+    </filter>
+  </defs>
+
+  <!-- OLD Server Box -->
+  <rect x="20" y="16" width="340" height="240" rx="12" fill="#fef9f0" stroke="#e8a735" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="20" y="16" width="340" height="32" rx="12" fill="#e8a735"/>
+  <rect x="20" y="36" width="340" height="12" fill="#e8a735"/>
+  <text x="190" y="38" text-anchor="middle" fill="white" font-weight="700" font-size="12">OLD: pg-old.postgres.database.azure.com</text>
+
+  <!-- adventureworks (OLD) -->
+  <rect x="40" y="64" width="300" height="84" rx="8" fill="#f0fdf4" stroke="#22c55e" stroke-width="1.5"/>
+  <text x="56" y="84" font-weight="700" fill="#166534" font-size="12">adventureworks</text>
+  <text x="56" y="104" fill="#16a34a" font-size="11">publication: migration_pub (pgoutput)</text>
+  <text x="56" y="120" fill="#16a34a" font-size="11">slot: migration_sub</text>
+  <rect x="232" y="70" width="100" height="20" rx="4" fill="#dcfce7" stroke="#22c55e" stroke-width="1"/>
+  <text x="282" y="84" text-anchor="middle" fill="#166534" font-size="10" font-weight="600">Logical Rep.</text>
+  <circle cx="318" cy="132" r="6" fill="#22c55e"/>
+
+  <!-- adventureworks2 (OLD) -->
+  <rect x="40" y="160" width="300" height="84" rx="8" fill="#f5f3ff" stroke="#8b5cf6" stroke-width="1.5"/>
+  <text x="56" y="180" font-weight="700" fill="#5b21b6" font-size="12">adventureworks2</text>
+  <text x="56" y="200" fill="#7c3aed" font-size="11">publication: 없음</text>
+  <text x="56" y="216" fill="#7c3aed" font-size="11">slot: azpgmigslot_* (test_decoding)</text>
+  <rect x="232" y="166" width="100" height="20" rx="4" fill="#ede9fe" stroke="#8b5cf6" stroke-width="1"/>
+  <text x="282" y="180" text-anchor="middle" fill="#5b21b6" font-size="10" font-weight="600">Azure Migration</text>
+  <circle cx="318" cy="228" r="6" fill="#8b5cf6"/>
+
+  <!-- NEW Server Box -->
+  <rect x="360" y="16" width="340" height="240" rx="12" fill="#f0f9ff" stroke="#2563eb" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="360" y="16" width="340" height="32" rx="12" fill="#2563eb"/>
+  <rect x="360" y="36" width="340" height="12" fill="#2563eb"/>
+  <text x="530" y="38" text-anchor="middle" fill="white" font-weight="700" font-size="12">NEW: pg-new.postgres.database.azure.com</text>
+
+  <!-- adventureworks (NEW) -->
+  <rect x="380" y="64" width="300" height="84" rx="8" fill="#f0fdf4" stroke="#22c55e" stroke-width="1.5"/>
+  <text x="396" y="84" font-weight="700" fill="#166534" font-size="12">adventureworks</text>
+  <text x="396" y="104" fill="#16a34a" font-size="11">subscription: migration_sub</text>
+  <text x="396" y="120" fill="#16a34a" font-size="11">내장 Apply Worker가 수신</text>
+  <circle cx="394" cy="132" r="6" fill="#22c55e"/>
+
+  <!-- adventureworks2 (NEW) -->
+  <rect x="380" y="160" width="300" height="84" rx="8" fill="#f5f3ff" stroke="#8b5cf6" stroke-width="1.5"/>
+  <text x="396" y="180" font-weight="700" fill="#5b21b6" font-size="12">adventureworks2</text>
+  <text x="396" y="200" fill="#7c3aed" font-size="11">subscription: 없음</text>
+  <text x="396" y="216" fill="#7c3aed" font-size="11">pgcopydb가 외부에서 SQL로 적용</text>
+  <circle cx="394" cy="228" r="6" fill="#8b5cf6"/>
+
+  <!-- LR Arrow (green) -->
+  <line x1="324" y1="132" x2="388" y2="132" stroke="#22c55e" stroke-width="2.5" marker-end="url(#arrow-lr)"/>
+
+  <!-- DMS Arrow (purple) -->
+  <line x1="324" y1="228" x2="388" y2="228" stroke="#8b5cf6" stroke-width="2.5" marker-end="url(#arrow-dms)"/>
+
+  <!-- Legend -->
+  <rect x="120" y="290" width="480" height="100" rx="10" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1" filter="url(#shadow)"/>
+  <text x="360" y="316" text-anchor="middle" font-weight="700" fill="#334155" font-size="13">독립성 검증 결과</text>
+
+  <!-- LR legend -->
+  <line x1="150" y1="340" x2="190" y2="340" stroke="#22c55e" stroke-width="2.5"/>
+  <circle cx="190" cy="340" r="4" fill="#22c55e"/>
+  <text x="200" y="344" fill="#166534" font-size="11" font-weight="600">Logical Replication</text>
+  <text x="200" y="360" fill="#64748b" font-size="10">pgoutput + Publication + Subscription (엔진 내장)</text>
+
+  <!-- DMS legend -->
+  <line x1="420" y1="340" x2="460" y2="340" stroke="#8b5cf6" stroke-width="2.5"/>
+  <circle cx="460" cy="340" r="4" fill="#8b5cf6"/>
+  <text x="470" y="344" fill="#5b21b6" font-size="11" font-weight="600">Azure Migration</text>
+  <text x="470" y="360" fill="#64748b" font-size="10">test_decoding + pgcopydb (외부 프로세스)</text>
+
+  <!-- Conclusion -->
+  <rect x="160" y="410" width="400" height="88" rx="10" fill="#fff" stroke="#94a3b8" stroke-width="1" filter="url(#shadow)"/>
+  <text x="360" y="436" text-anchor="middle" font-weight="700" fill="#1e293b" font-size="12">각 방식은 별도의 Slot / WAL Sender를 사용</text>
+  <text x="360" y="458" text-anchor="middle" fill="#475569" font-size="11">한쪽의 중단/장애가 다른 쪽에 영향 없음</text>
+
+  <rect x="260" y="470" width="200" height="22" rx="4" fill="#dcfce7" stroke="#22c55e" stroke-width="1"/>
+  <text x="360" y="486" text-anchor="middle" fill="#166534" font-size="11" font-weight="600">완전히 독립적으로 동작</text>
+</svg>

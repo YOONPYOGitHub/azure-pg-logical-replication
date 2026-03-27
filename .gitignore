@@ -1,0 +1,27 @@
+# Validation output directories
+validation/validation_*/
+
+# Server parameter comparison outputs
+params_diff.txt
+params_source_only.txt
+params_target_only.txt
+src_params_raw.txt
+tgt_params_raw.txt
+
+# Schema dumps
+*.sql
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor
+.vscode/
+*.swp
+*.swo
+*~
+
+# Credentials / secrets
+*.env
+.env.*

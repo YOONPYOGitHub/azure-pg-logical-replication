@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 760" font-family="'Segoe UI', -apple-system, sans-serif" font-size="13">
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#475569"/>
+    </marker>
+  </defs>
+
+  <!-- Title -->
+  <text x="360" y="28" text-anchor="middle" font-weight="700" font-size="15" fill="#1e293b">Logical Replication 동기화 흐름</text>
+
+  <!-- Step 1 -->
+  <rect x="160" y="50" width="400" height="48" rx="8" fill="#fff" stroke="#94a3b8" stroke-width="1.5"/>
+  <circle cx="190" cy="74" r="14" fill="#e8a735"/>
+  <text x="190" y="79" text-anchor="middle" fill="white" font-weight="700" font-size="12">1</text>
+  <text x="220" y="70" font-weight="600" fill="#334155">SOURCE에서 DML 실행</text>
+  <text x="220" y="86" fill="#64748b" font-size="11">INSERT / UPDATE / DELETE</text>
+
+  <line x1="360" y1="98" x2="360" y2="118" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Step 2 -->
+  <rect x="160" y="126" width="400" height="48" rx="8" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+  <circle cx="190" cy="150" r="14" fill="#3b82f6"/>
+  <text x="190" y="155" text-anchor="middle" fill="white" font-weight="700" font-size="12">2</text>
+  <text x="220" y="146" font-weight="600" fill="#1e40af">WAL에 변경 사항 기록</text>
+  <text x="220" y="162" fill="#3b82f6" font-size="11">wal_level=logical → 논리적 정보 포함</text>
+
+  <line x1="360" y1="174" x2="360" y2="194" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Step 3 -->
+  <rect x="160" y="202" width="400" height="48" rx="8" fill="#f0fdf4" stroke="#22c55e" stroke-width="1.5"/>
+  <circle cx="190" cy="226" r="14" fill="#22c55e"/>
+  <text x="190" y="231" text-anchor="middle" fill="white" font-weight="700" font-size="12">3</text>
+  <text x="220" y="222" font-weight="600" fill="#166534">Publication 필터링</text>
+  <text x="220" y="238" fill="#16a34a" font-size="11">발행 대상 테이블의 변경만 선택</text>
+
+  <line x1="360" y1="250" x2="360" y2="270" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Step 4 -->
+  <rect x="120" y="278" width="480" height="68" rx="8" fill="#faf5ff" stroke="#a855f7" stroke-width="1.5"/>
+  <circle cx="150" cy="302" r="14" fill="#a855f7"/>
+  <text x="150" y="307" text-anchor="middle" fill="white" font-weight="700" font-size="12">4</text>
+  <text x="180" y="298" font-weight="600" fill="#6b21a8">Replication Slot이 WAL을 pgoutput으로 디코딩</text>
+  <text x="180" y="316" fill="#9333ea" font-size="11">행 단위 논리적 변경 메시지로 변환</text>
+  <text x="180" y="332" fill="#9333ea" font-size="11">구독자가 확인(confirm)할 때까지 WAL 세그먼트 보존</text>
+
+  <line x1="360" y1="346" x2="360" y2="366" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Step 5 -->
+  <rect x="160" y="374" width="400" height="48" rx="8" fill="#fff1f2" stroke="#f43f5e" stroke-width="1.5"/>
+  <circle cx="190" cy="398" r="14" fill="#f43f5e"/>
+  <text x="190" y="403" text-anchor="middle" fill="white" font-weight="700" font-size="12">5</text>
+  <text x="220" y="394" font-weight="600" fill="#9f1239">WAL Sender가 네트워크로 전송</text>
+  <text x="220" y="410" fill="#e11d48" font-size="11">디코딩된 변경 사항을 TARGET으로 스트리밍</text>
+
+  <!-- Network zone -->
+  <rect x="280" y="430" width="160" height="28" rx="14" fill="#eff6ff" stroke="#93c5fd" stroke-width="1"/>
+  <text x="360" y="449" text-anchor="middle" fill="#2563eb" font-size="11" font-weight="600">Network (TCP)</text>
+
+  <line x1="360" y1="422" x2="360" y2="434" stroke="#475569" stroke-width="1.5"/>
+  <line x1="360" y1="458" x2="360" y2="478" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Step 6 -->
+  <rect x="120" y="486" width="480" height="68" rx="8" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+  <circle cx="150" cy="510" r="14" fill="#6366f1"/>
+  <text x="150" y="515" text-anchor="middle" fill="white" font-weight="700" font-size="12">6</text>
+  <text x="180" y="506" font-weight="600" fill="#3730a3">TARGET Apply Worker가 로컬 테이블에 적용</text>
+  <text x="180" y="524" fill="#6366f1" font-size="11">INSERT → INSERT  |  UPDATE → PK로 행 찾아서 UPDATE</text>
+  <text x="180" y="540" fill="#6366f1" font-size="11">DELETE → PK/REPLICA IDENTITY로 행 찾아서 DELETE</text>
+
+  <line x1="360" y1="554" x2="360" y2="574" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Step 7 -->
+  <rect x="120" y="582" width="480" height="68" rx="8" fill="#f0fdf4" stroke="#22c55e" stroke-width="1.5"/>
+  <circle cx="150" cy="606" r="14" fill="#22c55e"/>
+  <text x="150" y="611" text-anchor="middle" fill="white" font-weight="700" font-size="12">7</text>
+  <text x="180" y="602" font-weight="600" fill="#166534">confirmed_flush_lsn을 SOURCE에 보고</text>
+  <text x="180" y="620" fill="#16a34a" font-size="11">적용 완료 위치를 SOURCE에 전달</text>
+  <text x="180" y="636" fill="#16a34a" font-size="11">→ SOURCE가 해당 WAL 세그먼트를 해제할 수 있게 됨</text>
+
+  <!-- SOURCE / TARGET zone labels -->
+  <rect x="20" y="50" width="100" height="24" rx="4" fill="#fef3c7" stroke="#e8a735" stroke-width="1"/>
+  <text x="70" y="67" text-anchor="middle" fill="#92400e" font-size="11" font-weight="600">SOURCE 영역</text>
+
+  <line x1="20" y1="432" x2="120" y2="432" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4,3"/>
+  <line x1="600" y1="432" x2="700" y2="432" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4,3"/>
+
+  <rect x="20" y="486" width="100" height="24" rx="4" fill="#dbeafe" stroke="#2563eb" stroke-width="1"/>
+  <text x="70" y="503" text-anchor="middle" fill="#1e40af" font-size="11" font-weight="600">TARGET 영역</text>
+
+  <!-- Legend -->
+  <rect x="160" y="680" width="400" height="64" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="360" y="700" text-anchor="middle" font-weight="600" fill="#475569" font-size="12">동기화 특징</text>
+  <text x="180" y="720" fill="#64748b" font-size="11">실시간 스트리밍  |  행 단위 복제  |  슬롯으로 WAL 보존  |  LSN으로 진행 추적</text>
+  <text x="180" y="736" fill="#64748b" font-size="11">DDL/시퀀스 미복제  |  중단 후 이어서 복제 가능 (슬롯 유지)</text>
+</svg>

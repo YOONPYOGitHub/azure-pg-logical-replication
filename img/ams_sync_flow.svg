@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 680" font-family="'Segoe UI', -apple-system, sans-serif" font-size="13">
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#475569"/>
+    </marker>
+  </defs>
+
+  <!-- Title -->
+  <text x="360" y="28" text-anchor="middle" font-weight="700" font-size="15" fill="#1e293b">Azure Migration Service 동기화 흐름</text>
+
+  <!-- Step 1 -->
+  <rect x="140" y="50" width="440" height="48" rx="8" fill="#f5f3ff" stroke="#8b5cf6" stroke-width="1.5"/>
+  <circle cx="170" cy="74" r="14" fill="#8b5cf6"/>
+  <text x="170" y="79" text-anchor="middle" fill="white" font-weight="700" font-size="12">1</text>
+  <text x="200" y="70" font-weight="600" fill="#5b21b6">Azure Portal에서 Migration 생성</text>
+  <text x="200" y="86" fill="#7c3aed" font-size="11">SOURCE/TARGET 접속 정보, 대상 DB 지정</text>
+
+  <line x1="360" y1="98" x2="360" y2="118" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Step 2 -->
+  <rect x="140" y="126" width="440" height="48" rx="8" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+  <circle cx="170" cy="150" r="14" fill="#6366f1"/>
+  <text x="170" y="155" text-anchor="middle" fill="white" font-weight="700" font-size="12">2</text>
+  <text x="200" y="146" font-weight="600" fill="#3730a3">TARGET에 DB 자동 생성</text>
+  <text x="200" y="162" fill="#6366f1" font-size="11">Migration Service가 TARGET에 데이터베이스를 자동으로 생성</text>
+
+  <line x1="360" y1="174" x2="360" y2="194" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Step 3 -->
+  <rect x="100" y="202" width="520" height="80" rx="8" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+  <circle cx="130" cy="226" r="14" fill="#3b82f6"/>
+  <text x="130" y="231" text-anchor="middle" fill="white" font-weight="700" font-size="12">3</text>
+  <text x="160" y="222" font-weight="600" fill="#1e40af">Full Copy Phase (초기 복사)</text>
+  <text x="160" y="240" fill="#3b82f6" font-size="11">pgcopydb가 SOURCE의 스키마 + 데이터를 TARGET으로 복사</text>
+  <text x="160" y="256" fill="#3b82f6" font-size="11">이 시점에 Replication Slot (azpgmigslot_*) 생성</text>
+  <text x="160" y="272" fill="#3b82f6" font-size="11">Full Copy 중 발생하는 WAL 변경 사항은 슬롯이 보존</text>
+
+  <line x1="360" y1="282" x2="360" y2="302" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Step 4 -->
+  <rect x="100" y="310" width="520" height="80" rx="8" fill="#f0fdf4" stroke="#22c55e" stroke-width="1.5"/>
+  <circle cx="130" cy="334" r="14" fill="#22c55e"/>
+  <text x="130" y="339" text-anchor="middle" fill="white" font-weight="700" font-size="12">4</text>
+  <text x="160" y="330" font-weight="600" fill="#166534">CDC Phase (Change Data Capture)</text>
+  <text x="160" y="348" fill="#16a34a" font-size="11">WAL Sender가 test_decoding으로 WAL을 디코딩하여 전송</text>
+  <text x="160" y="364" fill="#16a34a" font-size="11">pgcopydb가 디코딩 결과를 파싱하여 TARGET에 적용</text>
+  <text x="160" y="380" fill="#16a34a" font-size="11">지속적으로 SOURCE 변경 사항을 따라감 (Online)</text>
+
+  <line x1="360" y1="390" x2="360" y2="410" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Step 5 -->
+  <rect x="100" y="418" width="520" height="80" rx="8" fill="#fff7ed" stroke="#f97316" stroke-width="1.5"/>
+  <circle cx="130" cy="442" r="14" fill="#f97316"/>
+  <text x="130" y="447" text-anchor="middle" fill="white" font-weight="700" font-size="12">5</text>
+  <text x="160" y="438" font-weight="600" fill="#9a3412">Cutover (사용자가 수동 실행)</text>
+  <text x="160" y="456" fill="#ea580c" font-size="11">Azure Portal에서 Cutover 버튼 클릭</text>
+  <text x="160" y="472" fill="#ea580c" font-size="11">SOURCE 쓰기 차단 → 잔여 WAL 적용 → 완료</text>
+  <text x="160" y="488" fill="#ea580c" font-size="11">Migration Service가 슬롯 정리</text>
+
+  <!-- Phase labels on right side -->
+  <rect x="640" y="210" width="64" height="72" rx="6" fill="#dbeafe" stroke="#3b82f6" stroke-width="1"/>
+  <text x="672" y="236" text-anchor="middle" fill="#1e40af" font-size="10" font-weight="600">Full</text>
+  <text x="672" y="250" text-anchor="middle" fill="#1e40af" font-size="10" font-weight="600">Copy</text>
+  <text x="672" y="270" text-anchor="middle" fill="#3b82f6" font-size="10">일괄 복사</text>
+
+  <rect x="640" y="318" width="64" height="64" rx="6" fill="#f0fdf4" stroke="#22c55e" stroke-width="1"/>
+  <text x="672" y="342" text-anchor="middle" fill="#166534" font-size="10" font-weight="600">CDC</text>
+  <text x="672" y="358" text-anchor="middle" fill="#16a34a" font-size="10">실시간</text>
+  <text x="672" y="372" text-anchor="middle" fill="#16a34a" font-size="10">동기화</text>
+
+  <rect x="640" y="426" width="64" height="64" rx="6" fill="#fff7ed" stroke="#f97316" stroke-width="1"/>
+  <text x="672" y="452" text-anchor="middle" fill="#9a3412" font-size="10" font-weight="600">Cut</text>
+  <text x="672" y="466" text-anchor="middle" fill="#9a3412" font-size="10" font-weight="600">over</text>
+  <text x="672" y="480" text-anchor="middle" fill="#ea580c" font-size="10">전환</text>
+
+  <!-- Legend -->
+  <rect x="100" y="530" width="520" height="130" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="360" y="554" text-anchor="middle" font-weight="600" fill="#475569" font-size="12">Logical Replication과의 주요 차이</text>
+
+  <circle cx="134" y="578" r="4" fill="#a855f7"/>
+  <text x="148" y="582" fill="#64748b" font-size="11">test_decoding 플러그인 사용 (pgoutput이 아님)</text>
+
+  <circle cx="134" y="600" r="4" fill="#a855f7"/>
+  <text x="148" y="604" fill="#64748b" font-size="11">Publication/Subscription 불필요 (WAL 직접 디코딩)</text>
+
+  <circle cx="134" y="622" r="4" fill="#a855f7"/>
+  <text x="148" y="626" fill="#64748b" font-size="11">TARGET에 pg_subscription 흔적 없음 (외부 프로세스)</text>
+
+  <circle cx="134" y="644" r="4" fill="#a855f7"/>
+  <text x="148" y="648" fill="#64748b" font-size="11">Cancel 시 TARGET DB 삭제됨, 재개 불가 (처음부터 다시 시작)</text>
+</svg>
