@@ -2,7 +2,7 @@
 
 Logical Replication 방식의 마이그레이션에 필요한 사전 검증 항목을 **마이그레이션 실행 전에** 로컬에서 미리 검증합니다.
 
-> **참고**: Azure Portal의 Migration 서비스(DMS)와 Logical Replication은 동작 방식이 다릅니다.
+> **참고**: Azure Portal의 Migration 서비스와 Logical Replication은 동작 방식이 다릅니다.
 > 이 스크립트는 Logical Replication(pgoutput + pg_publication/pg_subscription) 기준으로 최적화되어 있습니다.
 > - [MS Docs: Logical replication and logical decoding](https://learn.microsoft.com/en-us/azure/postgresql/configure-maintain/concepts-logical)
 

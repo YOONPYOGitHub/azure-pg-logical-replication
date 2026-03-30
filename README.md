@@ -378,7 +378,7 @@ BEGIN
 END $$;
 ```
 
-> 상세: [logical_replication_guide.md](logical_replication_guide.md) — 시퀀스 동기화 섹션
+> 상세: [logical_replication_notes.md](logical_replication_notes.md) — 시퀀스 동기화 섹션
 
 ---
 
@@ -449,6 +449,7 @@ DROP PUBLICATION migration_pub;
 | [compare_server_parameters.md](compare_server_parameters.md) | 서버 파라미터 비교 스크립트 |
 | [logical_replication_notes](logical_replication_notes.md) | PK/REPLICA IDENTITY 주의사항, 시퀀스 동기화 |
 | [replication_methods_comparison.md](replication_methods_comparison.md) | Logical Replication vs Azure Migration Service 비교 |
+| [dml_sync_behavior_comparison.md](dml_sync_behavior_comparison.md) | DML 동기화 동작 차이 및 데이터 정합성 위험 비교 |
 
 ## 참고
 
