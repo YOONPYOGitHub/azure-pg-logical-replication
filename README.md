@@ -16,8 +16,8 @@ Azure Database for PostgreSQL Flexible Server 간 **Logical Replication**을 사
 | 1 | [Source 서버 설정](#step-1-source-서버-설정-publisher) | Source (Azure Portal + DB) |
 | 2 | [Target 서버 준비](#step-2-target-서버-준비) | Target (Azure Portal) |
 | 3 | [사전 검증 (Validation)](#step-3-사전-검증-validation) | VM |
-| 4 | [Schema dump](#step-4-schema-dump-vm) | VM → Source |
-| 5 | [Schema import](#step-5-schema-import-vm) | VM → Target |
+| 4 | [Schema dump + Role dump](#step-4-schema-dump--role-dump-vm) | VM → Source |
+| 5 | [Role import + Schema import](#step-5-role-import--schema-import-vm) | VM → Target |
 | 6 | [Publication 생성](#step-6-publication-생성-source) | Source DB |
 | 7 | [Subscription 생성](#step-7-subscription-생성-target) | Target DB |
 | 8 | [Initial sync & Replication 상태 확인](#step-8-initial-sync--replication-상태-확인) | Source + Target DB |
@@ -145,9 +145,11 @@ bash validation/pre_migration_validation.sh
 
 ---
 
-## Step 4. Schema dump (VM)
+## Step 4. Schema dump + Role dump (VM)
 
-작업 VM에서 Source DB의 스키마를 덤프합니다.
+작업 VM에서 Source DB의 스키마와 Role을 덤프합니다.
+
+### 4-1. Schema dump
 
 ```bash
 pg_dump \
@@ -163,11 +165,57 @@ pg_dump \
 
 <img src="img/05. schema_dump.png" width="720" alt="Schema dump">
 
+### 4-2. Role dump
+
+```bash
+pg_dumpall \
+    -h pg-old.postgres.database.azure.com \
+    -U adminuser \
+    --roles-only \
+    > roles.sql
+```
+
+> `--roles-only` 옵션으로 Role(사용자/그룹) 정의만 추출합니다.  
+> Logical Replication은 Role을 복제하지 않으므로, 스키마에서 참조하는 Owner/GRANT 대상 Role이 Target에 존재해야 합니다.
+
+<img src="img/06. role_dump.png" width="720" alt="Role dump">
+
 ---
 
-## Step 5. Schema import (VM)
+## Step 5. Role import + Schema import (VM)
 
-덤프한 스키마를 Target DB에 적용합니다.
+Role을 먼저 생성한 후 스키마를 Target DB에 적용합니다.
+
+### 5-1. Role import
+
+```bash
+psql \
+    -h pg-new.postgres.database.azure.com \
+    -U adminuser \
+    -d postgres \
+    -f roles.sql
+```
+
+> Role을 먼저 생성해야 Schema import 시 Owner/GRANT가 정상 적용됩니다.  
+> Azure Flexible Server에서 지원하지 않는 속성(`SUPERUSER`, `REPLICATION` 등)은 에러가 발생할 수 있으므로 필요시 `roles.sql`을 수정합니다.
+
+<img src="img/08. role_to_target.png" width="720" alt="Role을 Target에 적용">
+
+### 5-2. Role 확인
+
+```sql
+-- Target에서 Role 확인
+SELECT rolname, rolcanlogin, rolcreatedb, rolcreaterole, rolconnlimit,
+       COALESCE(rolvaliduntil::text, '-') AS valid_until
+FROM pg_roles
+WHERE rolname NOT LIKE 'pg_%'
+  AND rolname NOT IN ('azuresu','azure_pg_admin','sqladmin','replication')
+ORDER BY rolname;
+```
+
+<img src="img/09. check_role.png" width="720" alt="Role 확인">
+
+### 5-3. Schema import
 
 ```bash
 psql \
@@ -180,7 +228,7 @@ psql \
 > Source schema = Target schema가 **동일**해야 합니다.  
 > Subscription 생성 전에 Target에 테이블이 존재해야 initial data copy가 동작합니다.
 
-<img src="img/06. schema_to_target.png" width="720" alt="Schema를 Target에 적용">
+<img src="img/07. schema_to_target.png" width="720" alt="Schema를 Target에 적용">
 
 ---
 
@@ -198,7 +246,7 @@ CREATE PUBLICATION migration_pub FOR ALL TABLES;
 > **Publisher** → 변경 데이터를 제공하는 역할입니다.  
 > `FOR ALL TABLES`는 모든 테이블을 발행합니다. 특정 테이블만 지정하려면 `FOR TABLE t1, t2`를 사용합니다.
 
-<img src="img/07. publication_generation(source).png" width="720" alt="Publication 생성">
+<img src="img/10. publication_generation(source).png" width="720" alt="Publication 생성">
 
 ---
 
@@ -226,7 +274,7 @@ CREATE SUBSCRIPTION migration_sub
 >
 > 이 자동으로 시작됩니다.
 
-<img src="img/08. subscription_generation(source).png" width="720" alt="Subscription 생성">
+<img src="img/11. subscription_generation(source).png" width="720" alt="Subscription 생성">
 
 ---
 
@@ -246,6 +294,8 @@ SELECT * FROM pg_stat_replication;
 | `state` | `streaming` |
 | `sent_lsn` = `replay_lsn` | 지연 없음 |
 
+<img src="img/12. check_replication_status(source).png" width="2160" alt="Replication 상태 확인 (Source)">
+
 또는:
 
 ```sql
@@ -253,8 +303,6 @@ SELECT * FROM pg_stat_replication;
 SELECT slot_name, active, confirmed_flush_lsn
 FROM pg_replication_slots;
 ```
-
-<img src="img/09. check_replication_status(source).png" width="2160" alt="Replication 상태 확인 (Source)">
 
 ### Target에서 확인
 
@@ -269,7 +317,7 @@ SELECT * FROM pg_stat_subscription;
 | `received_lsn` | 지속 증가 |
 | `last_msg_receipt_time` | 최근 시간 |
 
-<img src="img/10. check_replication_status(target).png" width="2160" alt="Replication 상태 확인 (Target)">
+<img src="img/13. check_replication_status(target).png" width="2160" alt="Replication 상태 확인 (Target)">
 
 ### Replication lag 확인
 
@@ -446,7 +494,7 @@ DROP SUBSCRIPTION migration_sub;
 
 > Subscription을 삭제하면 Source의 Replication Slot도 자동으로 삭제됩니다.
 
-<img src="img/11. stop_replication_at_target(target).png" width="720" alt="Target에서 Subscription 제거">
+<img src="img/14. stop_replication_at_target(target).png" width="720" alt="Target에서 Subscription 제거">
 
 ### 13-2. Source에서 Publication 제거
 
@@ -455,7 +503,7 @@ DROP SUBSCRIPTION migration_sub;
 DROP PUBLICATION migration_pub;
 ```
 
-<img src="img/12. remove_replication(source).png" width="720" alt="Source에서 Publication 제거">
+<img src="img/15. remove_replication(source).png" width="720" alt="Source에서 Publication 제거">
 
 ---
 
@@ -468,6 +516,7 @@ DROP PUBLICATION migration_pub;
 | [logical_replication_notes](logical_replication_notes.md) | PK/REPLICA IDENTITY 주의사항, 시퀀스 동기화 |
 | [replication_methods_comparison.md](replication_methods_comparison.md) | Logical Replication vs Azure Migration Service 비교 |
 | [dml_sync_behavior_comparison.md](dml_sync_behavior_comparison.md) | DML 동기화 동작 차이 및 데이터 정합성 위험 비교 |
+| [replication_verification_log.md](replication_verification_log.md) | Logical Replication vs Migration 독립성 검증 로그 |
 
 ## 참고
 
