@@ -31,9 +31,6 @@ HINT:  To enable updating the table, set REPLICA IDENTITY using ALTER TABLE.
 ```sql
 -- 기존 컬럼 조합으로 PK 추가
 ALTER TABLE 테이블명 ADD PRIMARY KEY (col1, col2);
-
--- 또는 SERIAL 컬럼을 새로 추가하여 PK로 지정
-ALTER TABLE 테이블명 ADD COLUMN id SERIAL PRIMARY KEY;
 ```
 
 - REPLICA IDENTITY = DEFAULT 상태에서 PK를 자동으로 사용
@@ -134,50 +131,12 @@ SELECT setval('test_bigserial_sync_id_seq', (SELECT MAX(id) FROM test_bigserial_
 
 ```sql
 -- pg-new (target)에서 실행
--- public 스키마의 모든 SERIAL/BIGSERIAL 시퀀스를 해당 테이블의 MAX 값으로 맞춤
+-- 모든 스키마의 SERIAL/BIGSERIAL 시퀀스를 해당 테이블의 MAX 값으로 보정
 DO $$
 DECLARE
     r RECORD;
     max_val BIGINT;
 BEGIN
-    FOR r IN
-        SELECT
-            s.sequencename AS seq_name,
-            t.tablename AS tbl_name,
-            a.attname AS col_name
-        FROM pg_sequences s
-        JOIN pg_depend d ON d.objid = (s.schemaname || '.' || s.sequencename)::regclass
-        JOIN pg_class c ON c.oid = d.refobjid
-        JOIN pg_tables t ON t.tablename = c.relname AND t.schemaname = s.schemaname
-        JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum = d.refobjsubid
-        WHERE s.schemaname = 'public'
-          AND d.deptype = 'a'  -- auto dependency (SERIAL)
-    LOOP
-        EXECUTE format('SELECT COALESCE(MAX(%I), 0) FROM %I.%I',
-                        r.col_name, 'public', r.tbl_name)
-                INTO max_val;
-
-        IF max_val > 0 THEN
-            EXECUTE format('SELECT setval(%L, %s)', 
-                           'public.' || r.seq_name, max_val);
-            RAISE NOTICE 'Synced: %.% → %', r.tbl_name, r.seq_name, max_val;
-        END IF;
-    END LOOP;
-END $$;
-```
-
-#### 특정 스키마의 시퀀스 동기화 (adventureworks 등)
-
-```sql
--- pg-new (target)에서 실행
--- 원하는 스키마를 지정하여 시퀀스 동기화
-DO $$
-DECLARE
-    r RECORD;
-    max_val BIGINT;
-    v_schema TEXT;
-BEGIN
-    -- 시퀀스가 있는 모든 스키마 순회
     FOR r IN
         SELECT
             n.nspname AS schema_name,
@@ -188,21 +147,38 @@ BEGIN
         JOIN pg_namespace n ON n.oid = s.relnamespace
         JOIN pg_depend d ON d.objid = s.oid
         JOIN pg_class t ON t.oid = d.refobjid
-        JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = d.refobjsubid
-        WHERE s.relkind = 'S'  -- sequence
-          AND d.deptype = 'a'  -- auto dependency
+        JOIN pg_attribute a ON a.attrelid = t.oid
+                           AND a.attnum = d.refobjsubid
+        WHERE s.relkind = 'S'
+          AND d.deptype = 'a'
           AND n.nspname NOT IN ('pg_catalog', 'information_schema')
         ORDER BY n.nspname, t.relname
     LOOP
-        EXECUTE format('SELECT COALESCE(MAX(%I), 0) FROM %I.%I',
-                        r.col_name, r.schema_name, r.tbl_name)
-                INTO max_val;
+        -- 대상 테이블의 현재 최대 키 값 조회
+        EXECUTE format(
+            'SELECT COALESCE(MAX(%I), 0) FROM %I.%I',
+            r.col_name, r.schema_name, r.tbl_name
+        )
+        INTO max_val;
 
         IF max_val > 0 THEN
-            EXECUTE format('SELECT setval(''%I.%I'', %s)',
-                           r.schema_name, r.seq_name, max_val);
-            RAISE NOTICE 'Synced: %.%.% → %',
-                         r.schema_name, r.tbl_name, r.seq_name, max_val;
+            -- sequence를 현재 최대 키 값으로 보정
+            EXECUTE format(
+                'SELECT setval(%L::regclass, %s, true)',
+                r.schema_name || '.' || r.seq_name,
+                max_val
+            );
+
+            -- 보정 결과 출력
+            RAISE NOTICE 'Synced: %.% -> %.% = %',
+                r.schema_name, r.tbl_name,
+                r.schema_name, r.seq_name,
+                max_val;
+        ELSE
+            -- 데이터 없는 테이블은 skip
+            RAISE NOTICE 'Skipped empty table: %.% -> %.%',
+                r.schema_name, r.tbl_name,
+                r.schema_name, r.seq_name;
         END IF;
     END LOOP;
 END $$;
@@ -213,45 +189,63 @@ END $$;
 ### 시퀀스 동기화 확인 쿼리
 
 ```sql
--- pg-new에서 실행: 시퀀스 last_value vs 테이블 MAX(id) 비교
-SELECT
-    s.schemaname,
-    s.sequencename,
-    s.last_value AS seq_value,
-    t.tbl_name,
-    t.max_id,
-    CASE
-        WHEN s.last_value >= t.max_id THEN 'OK'
-        ELSE 'SYNC NEEDED'
-    END AS status
-FROM pg_sequences s
-JOIN LATERAL (
-    SELECT
-        c.relname AS tbl_name,
-        d.refobjsubid,
-        a.attname AS col_name
-    FROM pg_depend d
-    JOIN pg_class c ON c.oid = d.refobjid
-    JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum = d.refobjsubid
-    WHERE d.objid = (s.schemaname || '.' || s.sequencename)::regclass
-      AND d.deptype = 'a'
-    LIMIT 1
-) dep ON TRUE
-CROSS JOIN LATERAL (
-    SELECT COALESCE(MAX(val), 0) AS max_id
-    FROM (
-        SELECT MAX(col) AS val
-        FROM ONLY pg_catalog.pg_class  -- placeholder
-    ) sub
-) t ON TRUE
-WHERE s.schemaname NOT IN ('pg_catalog', 'information_schema')
-ORDER BY s.schemaname, s.sequencename;
+-- pg-new (target)에서 실행: 시퀀스 last_value vs 테이블 MAX(id) 비교
+DO $$
+DECLARE
+    r RECORD;        -- sequence ↔ table 매핑 정보
+    max_val BIGINT;  -- 테이블의 최대값 (MAX(id))
+    seq_val BIGINT;  -- 시퀀스 현재 값 (last_value)
+BEGIN
+    FOR r IN
+        -- 컬럼에 종속된 sequence(serial/identity) 조회
+        SELECT
+            n.nspname AS schema_name,  -- 스키마명
+            s.relname AS seq_name,     -- 시퀀스명
+            t.relname AS tbl_name,     -- 테이블명
+            a.attname AS col_name      -- 컬럼명 (id 등)
+        FROM pg_class s
+        JOIN pg_namespace n ON n.oid = s.relnamespace
+        JOIN pg_depend d ON d.objid = s.oid
+        JOIN pg_class t ON t.oid = d.refobjid
+        JOIN pg_attribute a ON a.attrelid = t.oid
+                           AND a.attnum = d.refobjsubid
+        WHERE s.relkind = 'S'              -- sequence만
+          AND d.deptype = 'a'              -- OWNED BY 관계 (컬럼 연결)
+          AND n.nspname NOT IN ('pg_catalog', 'information_schema')
+        ORDER BY n.nspname, t.relname
+    LOOP
+        -- 테이블의 최대 키 값 조회
+        EXECUTE format(
+            'SELECT COALESCE(MAX(%I), 0) FROM %I.%I',
+            r.col_name, r.schema_name, r.tbl_name
+        )
+        INTO max_val;
 
--- 간단 버전: 수동으로 확인
-SELECT sequencename, last_value
-FROM pg_sequences
-WHERE schemaname = 'public'
-ORDER BY sequencename;
+        -- 시퀀스 현재 값 조회
+        EXECUTE format(
+            'SELECT last_value FROM %I.%I',
+            r.schema_name, r.seq_name
+        )
+        INTO seq_val;
+
+        -- 시퀀스 vs 테이블 값 비교
+        IF seq_val >= max_val THEN
+            -- 정상 상태
+            RAISE NOTICE '%',
+                'OK: ' || r.schema_name || '.' || r.seq_name ||
+                ' seq=' || seq_val ||
+                ' / table=' || r.schema_name || '.' || r.tbl_name ||
+                ' max(' || r.col_name || ')=' || max_val;
+        ELSE
+            -- 시퀀스 값이 부족 (충돌 가능)
+            RAISE NOTICE '%',
+                'SYNC NEEDED: ' || r.schema_name || '.' || r.seq_name ||
+                ' seq=' || seq_val ||
+                ' / table=' || r.schema_name || '.' || r.tbl_name ||
+                ' max(' || r.col_name || ')=' || max_val;
+        END IF;
+    END LOOP;
+END $$;
 ```
 
 ---

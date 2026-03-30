@@ -359,20 +359,38 @@ BEGIN
         JOIN pg_namespace n ON n.oid = s.relnamespace
         JOIN pg_depend d ON d.objid = s.oid
         JOIN pg_class t ON t.oid = d.refobjid
-        JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = d.refobjsubid
+        JOIN pg_attribute a ON a.attrelid = t.oid
+                           AND a.attnum = d.refobjsubid
         WHERE s.relkind = 'S'
           AND d.deptype = 'a'
           AND n.nspname NOT IN ('pg_catalog', 'information_schema')
         ORDER BY n.nspname, t.relname
     LOOP
-        EXECUTE format('SELECT COALESCE(MAX(%I), 0) FROM %I.%I',
-                        r.col_name, r.schema_name, r.tbl_name)
-                INTO max_val;
+        -- 대상 테이블의 현재 최대 키 값 조회
+        EXECUTE format(
+            'SELECT COALESCE(MAX(%I), 0) FROM %I.%I',
+            r.col_name, r.schema_name, r.tbl_name
+        )
+        INTO max_val;
+
         IF max_val > 0 THEN
-            EXECUTE format('SELECT setval(''%I.%I'', %s)',
-                           r.schema_name, r.seq_name, max_val);
-            RAISE NOTICE 'Synced: %.%.% → %',
-                         r.schema_name, r.tbl_name, r.seq_name, max_val;
+            -- sequence를 현재 최대 키 값으로 보정
+            EXECUTE format(
+                'SELECT setval(%L::regclass, %s, true)',
+                r.schema_name || '.' || r.seq_name,
+                max_val
+            );
+
+            -- 보정 결과 출력
+            RAISE NOTICE 'Synced: %.% -> %.% = %',
+                r.schema_name, r.tbl_name,
+                r.schema_name, r.seq_name,
+                max_val;
+        ELSE
+            -- 데이터 없는 테이블은 skip
+            RAISE NOTICE 'Skipped empty table: %.% -> %.%',
+                r.schema_name, r.tbl_name,
+                r.schema_name, r.seq_name;
         END IF;
     END LOOP;
 END $$;
