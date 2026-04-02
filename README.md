@@ -29,6 +29,19 @@ Azure Database for PostgreSQL Flexible Server 간 **Logical Replication**을 사
 
 ---
 
+## ⚠️ HA 환경 주의사항
+
+Source 또는 Target 서버에 **고가용성(HA)이 활성화**되어 있다면, Failover 시 논리 복제 슬롯이 유실될 수 있습니다.
+
+| PG 버전 | Failover 시 슬롯 | 필수 조치 |
+|---------|------------------|----------|
+| **16 이하** | ❌ 기본 유실 | `pg_failover_slots` 확장 + `hot_standby_feedback = on` |
+| **17 이상** | ✅ 자동 보존 | `sync_replication_slots = on` + `hot_standby_feedback = on` + subscription 생성 시 `failover = true` |
+
+> 상세: [logical_replication_limitations.md](logical_replication_limitations.md)
+
+---
+
 ## Step 1. Source 서버 설정 (Publisher)
 
 ### 1-1. Server parameter 변경
@@ -516,6 +529,7 @@ DROP PUBLICATION migration_pub;
 | [logical_replication_notes](logical_replication_notes.md) | PK/REPLICA IDENTITY 주의사항, 시퀀스 동기화 |
 | [replication_methods_comparison.md](replication_methods_comparison.md) | Logical Replication vs Azure Migration Service 비교 |
 | [dml_sync_behavior_comparison.md](dml_sync_behavior_comparison.md) | DML 동기화 동작 차이 및 데이터 정합성 위험 비교 |
+| [logical_replication_limitations.md](logical_replication_limitations.md) | HA Failover 시 슬롯 보존 (PG 16 이하 vs 17+) |
 | [replication_verification_log.md](replication_verification_log.md) | Logical Replication vs Migration 독립성 검증 로그 |
 
 ## 참고
