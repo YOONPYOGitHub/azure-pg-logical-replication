@@ -10,6 +10,10 @@ tgt_params_raw.txt
 
 # Schema dumps
 *.sql
+!poc/fixture.sql
+
+# Raw PoC evidence (may contain resource metadata); publish only reviewed summaries.
+poc/runs/
 
 # OS
 .DS_Store
