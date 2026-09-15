@@ -2,6 +2,8 @@
 
 Azure Database for PostgreSQL Flexible Server 간 **Logical Replication**을 사용한 Online 마이그레이션 Step-by-Step 가이드입니다.
 
+> **스키마·테이블 단위 복제:** 기존 절차에서 바꿀 부분은 [Step 1~13 단계별 변경표](schema_replication_poc.md#기존-db-to-db-가이드-대비-변경-단계)를 참고하세요. [실제 Azure 검증 결과](schema_replication_verification.md)도 함께 정리했습니다.
+
 > **환경**
 > - Source: `pg-old.postgres.database.azure.com` (PostgreSQL 16)
 > - Target: `pg-new.postgres.database.azure.com` (PostgreSQL 16+)
